@@ -6,7 +6,7 @@ from openai import OpenAI
 from streamlit_option_menu import option_menu
 
 # --- PATHS ---
-CHATBOX_PATH = r"d:\TIN HOC\A2. Năm học 2025 -2026\10002.Github\CHATBOX12052026"
+CHATBOX_PATH = "CHATBOX12052026"
 
 def get_chatbox_file(filename):
     return os.path.join(CHATBOX_PATH, filename)
