@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EduSmart – Nền Tảng Học Tập Thông Minh</title>
+  <meta name="description" content="Hệ thống quản lý giáo dục thông minh dành cho giáo viên và học sinh tiểu học"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ========== SCREEN 1: ROLE SELECTION ========== -->
+<div id="screen-role" class="screen active">
+  <div class="role-bg-decor">
+    <div class="decor-circle c1"></div>
+    <div class="decor-circle c2"></div>
+    <div class="decor-circle c3"></div>
+  </div>
+  <header class="role-header">
+    <div class="logo-wrap">
+      <div class="logo-icon"><i class="fas fa-graduation-cap"></i></div>
+      <span class="logo-text">EduSmart</span>
+    </div>
+    <button class="theme-toggle" id="themeToggle" title="Chuyển chế độ sáng/tối">
+      <i class="fas fa-moon"></i>
+    </button>
+  </header>
+  <main class="role-main">
+    <div class="role-hero">
+      <h1 class="role-title">Chào mừng đến với<br/><span class="gradient-text">EduSmart</span></h1>
+      <p class="role-subtitle">Nền tảng học tập thông minh – Kết nối giáo viên và học sinh</p>
+    </div>
+    <div class="role-cards">
+      <button class="role-card" id="btnStudent" onclick="goToStudent()">
+        <div class="card-glow"></div>
+        <div class="card-icon student-icon">
+          <i class="fas fa-child"></i>
+        </div>
+        <h2 class="card-title">Học Sinh</h2>
+        <p class="card-desc">Trò chuyện với AI, ôn bài, hỏi đáp thông minh</p>
+        <div class="card-arrow"><i class="fas fa-arrow-right"></i></div>
+      </button>
+      <button class="role-card" id="btnTeacher" onclick="goToLogin()">
+        <div class="card-glow"></div>
+        <div class="card-icon teacher-icon">
+          <i class="fas fa-chalkboard-teacher"></i>
+        </div>
+        <h2 class="card-title">Giáo Viên</h2>
+        <p class="card-desc">Quản lý lớp học, theo dõi điểm số, hỗ trợ học sinh</p>
+        <div class="card-arrow"><i class="fas fa-arrow-right"></i></div>
+      </button>
+    </div>
+    <p class="role-footer-note"><i class="fas fa-shield-alt"></i> Hệ thống bảo mật & an toàn cho trẻ em</p>
+  </main>
+</div>
+
+<!-- ========== SCREEN 2: TEACHER LOGIN ========== -->
+<div id="screen-login" class="screen">
+  <div class="login-bg-decor">
+    <div class="decor-circle c1"></div>
+    <div class="decor-circle c2"></div>
+  </div>
+  <div class="login-container">
+    <button class="back-btn" onclick="goBack('screen-role')"><i class="fas fa-arrow-left"></i> Quay lại</button>
+    <div class="login-card">
+      <div class="login-header">
+        <div class="login-avatar"><i class="fas fa-chalkboard-teacher"></i></div>
+        <h2>Đăng Nhập Giáo Viên</h2>
+        <p>Vui lòng nhập thông tin tài khoản</p>
+      </div>
+      <!-- Excel file upload -->
+      <div class="excel-upload-section">
+        <label for="excelFile" class="excel-upload-label">
+          <i class="fas fa-file-excel"></i>
+          <span id="excelFileName">Chọn file taikhoangv.xlsx</span>
+        </label>
+        <input type="file" id="excelFile" accept=".xlsx,.xls" onchange="loadExcelFile(this)"/>
+      </div>
+      <form class="login-form" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="username"><i class="fas fa-user"></i> Tên đăng nhập</label>
+          <input type="text" id="username" placeholder="Nhập tên đăng nhập..." autocomplete="username" required/>
+        </div>
+        <div class="form-group">
+          <label for="password"><i class="fas fa-lock"></i> Mật khẩu</label>
+          <div class="password-wrap">
+            <input type="password" id="password" placeholder="Nhập mật khẩu..." autocomplete="current-password" required/>
+            <button type="button" class="toggle-pw" onclick="togglePassword()"><i class="fas fa-eye" id="eyeIcon"></i></button>
+          </div>
+        </div>
+        <button type="submit" class="login-btn" id="loginBtn">
+          <span class="btn-text"><i class="fas fa-sign-in-alt"></i> Đăng Nhập</span>
+          <span class="btn-loading" style="display:none"><i class="fas fa-spinner fa-spin"></i> Đang xử lý...</span>
+        </button>
+      </form>
+      <p class="login-hint"><i class="fas fa-info-circle"></i> Tài khoản được lấy từ file Excel <strong>taikhoangv.xlsx</strong></p>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SCREEN 3: TEACHER DASHBOARD ========== -->
+<div id="screen-teacher" class="screen">
+  <div class="dashboard-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-wrap">
+          <div class="logo-icon"><i class="fas fa-graduation-cap"></i></div>
+          <span class="logo-text">EduSmart</span>
+        </div>
+        <button class="sidebar-close" onclick="toggleSidebar()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="sidebar-user">
+        <div class="user-avatar"><i class="fas fa-user-tie"></i></div>
+        <div class="user-info">
+          <span class="user-name" id="teacherName">Giáo viên</span>
+          <span class="user-role">Giáo viên</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="https://hsdttruong.qlgd.edu.vn/Login.aspx?returnUrl=~/default.aspx" class="nav-item" target="_blank">
+          <i class="fas fa-file-upload"></i><span>Nộp kế hoạch bài dạy</span>
+        </a>
+        <a href="https://taphuan.csdl.edu.vn/dashboard" class="nav-item" target="_blank">
+          <i class="fas fa-chalkboard-teacher"></i><span>Tập huấn</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="logout-btn" onclick="handleLogout()">
+          <i class="fas fa-sign-out-alt"></i> Đăng xuất
+        </button>
+      </div>
+    </aside>
+    <!-- Overlay for mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <!-- Main content -->
+    <div class="main-content">
+      <header class="topbar">
+        <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+        <div class="topbar-title" id="topbarTitle">Nộp kế hoạch bài dạy</div>
+        <div class="topbar-right">
+          <button class="theme-toggle" onclick="toggleTheme()"><i class="fas fa-moon" id="themeIcon2"></i></button>
+          <div class="topbar-user">
+            <div class="user-avatar sm"><i class="fas fa-user-tie"></i></div>
+          </div>
+        </div>
+      </header>
+
+      <!-- SECTION: Overview -->
+      <section id="section-overview" class="content-section active">
+        <div class="section-head">
+          <h2>Hệ thống quản lý bài dạy</h2>
+          <span class="date-badge"><i class="far fa-calendar-alt"></i> <span id="currentDate"></span></span>
+        </div>
+        
+        <div class="teacher-tools-grid">
+          <div class="tool-card">
+            <div class="tool-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+            <h3>Nộp kế hoạch bài dạy</h3>
+            <p>Truy cập hệ thống quản lý giáo dục để nộp kế hoạch bài dạy.</p>
+            <a href="https://hsdttruong.qlgd.edu.vn/Login.aspx?returnUrl=~/default.aspx" target="_blank" class="tool-btn">
+              <i class="fas fa-external-link-alt"></i> Truy cập ngay
+            </a>
+          </div>
+
+          <div class="tool-card">
+            <div class="tool-icon training"><i class="fas fa-graduation-cap"></i></div>
+            <h3>Chương trình tập huấn</h3>
+            <p>Tham gia bồi dưỡng và tập huấn chuyên môn nghiệp vụ.</p>
+            <a href="https://taphuan.csdl.edu.vn/dashboard" target="_blank" class="tool-btn training">
+              <i class="fas fa-external-link-alt"></i> Vào tập huấn
+            </a>
+          </div>
+        </div>
+
+        <style>
+          .teacher-tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+          }
+          .tool-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            border: 1px solid rgba(0,123,255,0.1);
+            transition: transform 0.3s ease;
+          }
+          .tool-card:hover {
+            transform: translateY(-5px);
+          }
+          .tool-icon {
+            font-size: 3.5rem;
+            color: #007bff;
+            margin-bottom: 1.5rem;
+          }
+          .tool-icon.training {
+            color: #6f42c1;
+          }
+          .tool-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #333;
+          }
+          .tool-card p {
+            color: #666;
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+          }
+          .tool-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: linear-gradient(135deg, #007bff, #00d4ff);
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+          }
+          .tool-btn.training {
+            background: linear-gradient(135deg, #6f42c1, #a927f9);
+          }
+          .tool-btn:hover {
+            transform: scale(1.05);
+            color: white;
+            opacity: 0.9;
+          }
+        </style>
+      </section>
+
+      <!-- SECTION: Students -->
+      <section id="section-students" class="content-section">
+        <div class="section-head">
+          <h2>Quản lý học sinh</h2>
+          <button class="add-btn"><i class="fas fa-plus"></i> Thêm học sinh</button>
+        </div>
+        <div class="search-bar-wrap">
+          <i class="fas fa-search"></i>
+          <input type="text" placeholder="Tìm kiếm học sinh..." oninput="filterStudents(this.value)"/>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="studentTable">
+            <thead><tr><th>#</th><th>Họ và tên</th><th>Lớp</th><th>Ngày sinh</th><th>Trạng thái</th><th>Hành động</th></tr></thead>
+            <tbody id="studentBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SECTION: Grades -->
+      <section id="section-grades" class="content-section">
+        <div class="section-head"><h2>Bảng điểm học sinh</h2></div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>#</th><th>Học sinh</th><th>Toán</th><th>Tiếng Việt</th><th>Khoa học</th><th>Trung bình</th><th>Xếp loại</th></tr></thead>
+            <tbody id="gradeBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SECTION: Chat -->
+      <section id="section-chat" class="content-section">
+        <div class="section-head"><h2>Chat hỗ trợ học sinh</h2></div>
+        <div class="teacher-chat-wrap">
+          <div class="chat-list-panel">
+            <div class="chat-search"><i class="fas fa-search"></i><input type="text" placeholder="Tìm học sinh..."/></div>
+            <div class="chat-contacts" id="chatContacts"></div>
+          </div>
+          <div class="chat-main-panel">
+            <div class="chat-messages" id="teacherMessages"></div>
+            <div class="chat-input-row">
+              <input type="text" id="teacherInput" placeholder="Nhập tin nhắn..." onkeydown="if(event.key==='Enter')sendTeacherMsg()"/>
+              <button onclick="sendTeacherMsg()"><i class="fas fa-paper-plane"></i></button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION: Lessons -->
+      <section id="section-lessons" class="content-section">
+        <div class="section-head"><h2>Quản lý bài giảng</h2><button class="add-btn"><i class="fas fa-plus"></i> Tạo bài giảng</button></div>
+        <div class="lessons-grid" id="lessonsGrid"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SCREEN 4: STUDENT CHATBOX ========== -->
+<div id="screen-student" class="screen">
+  <div class="student-layout">
+    <header class="student-header">
+      <button class="back-btn" onclick="goBack('screen-role')"><i class="fas fa-arrow-left"></i> Quay lại</button>
+      <div class="student-header-center">
+        <div class="ai-avatar-sm"><i class="fas fa-robot"></i><span class="ai-online"></span></div>
+        <div>
+          <div class="ai-name">EduBot AI <span class="ai-badge">Smart</span></div>
+          <div class="ai-status">Đang hoạt động • Sẵn sàng hỗ trợ</div>
+        </div>
+      </div>
+      <button class="theme-toggle" onclick="toggleTheme()"><i class="fas fa-moon"></i></button>
+    </header>
+    <div class="chatbox-container">
+      <div class="chat-messages" id="studentMessages">
+        <!-- Welcome message injected by JS -->
+      </div>
+    </div>
+    <div class="student-input-area">
+      <div class="quick-replies" id="quickReplies">
+        <button onclick="sendQuick('Giải bài toán cho em với!')">🔢 Toán học</button>
+        <button onclick="sendQuick('Em cần ôn Tiếng Việt!')">📖 Tiếng Việt</button>
+        <button onclick="sendQuick('Kể chuyện vui cho em nghe!')">🌟 Kể chuyện</button>
+        <button onclick="sendQuick('Em không hiểu bài này!')">❓ Hỏi bài</button>
+        <button onclick="sendQuick('Em muốn liên lạc với giáo viên')">📧 Liên lạc giáo viên</button>
+      </div>
+      <div class="input-row">
+        <button class="emoji-btn" title="Emoji" onclick="toggleEmojiPicker()"><i class="fas fa-smile"></i></button>
+        <input type="text" id="studentInput" placeholder="Hỏi EduBot bất cứ điều gì..." onkeydown="if(event.key==='Enter')sendStudentMsg()"/>
+        <button class="send-btn" onclick="sendStudentMsg()"><i class="fas fa-paper-plane"></i></button>
+      </div>
+      <div class="emoji-picker" id="emojiPicker">
+        <span onclick="addEmoji('😊')">😊</span><span onclick="addEmoji('👍')">👍</span>
+        <span onclick="addEmoji('🎉')">🎉</span><span onclick="addEmoji('❤️')">❤️</span>
+        <span onclick="addEmoji('🌟')">🌟</span><span onclick="addEmoji('🎈')">🎈</span>
+        <span onclick="addEmoji('🦋')">🦋</span><span onclick="addEmoji('🌈')">🌈</span>
+        <span onclick="addEmoji('🐶')">🐶</span><span onclick="addEmoji('🍎')">🍎</span>
+        <span onclick="addEmoji('🚀')">🚀</span><span onclick="addEmoji('📚')">📚</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== POPUP / TOAST ========== -->
+<div id="popup-overlay" class="popup-overlay">
+  <div class="popup-box" id="popupBox">
+    <div class="popup-icon" id="popupIcon"></div>
+    <h3 id="popupTitle"></h3>
+    <p id="popupMsg"></p>
+    <button class="popup-btn" onclick="closePopup()">Đóng</button>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
