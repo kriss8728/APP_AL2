@@ -2,6 +2,12 @@ import streamlit as st
 import pandas as pd
 import time
 import os
+import io
+import base64
+from PIL import Image
+import pytesseract
+from pdf2image import convert_from_bytes
+from docx import Document
 from openai import OpenAI
 from streamlit_option_menu import option_menu
 
@@ -115,6 +121,46 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+# --- OCR HELPERS (From RPDFapp.py) ---
+def encode_image_to_base64(image_bytes):
+    return base64.b64encode(image_bytes).decode('utf-8')
+
+def get_ocr_mime_type(file_extension):
+    mime_types = {'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'webp': 'image/webp'}
+    return mime_types.get(file_extension.lower(), 'image/jpeg')
+
+def ocr_with_ai_logic(image_bytes, api_key, file_extension='jpg'):
+    try:
+        client_ocr = OpenAI(api_key=api_key)
+        base64_image = encode_image_to_base64(image_bytes)
+        mime_type = get_ocr_mime_type(file_extension)
+        response = client_ocr.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": [
+                {"type": "text", "text": "Hãy trích xuất toàn bộ văn bản trong ảnh này. Giữ nguyên định dạng và xuống dòng. Chỉ trả về văn bản đã trích xuất."},
+                {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{base64_image}"}},
+            ]}],
+            max_tokens=4000,
+        )
+        return response.choices[0].message.content, None
+    except Exception as e:
+        return None, str(e)
+
+def create_word_file(text):
+    doc = Document()
+    doc.add_paragraph(text)
+    buf = io.BytesIO()
+    doc.save(buf)
+    return buf.getvalue()
+
+# Cấu hình Tesseract cho Windows
+if os.name == 'nt':
+    common_paths = [r'C:\Program Files\Tesseract-OCR\tesseract.exe', r'C:\Users\\' + os.getlogin() + r'\AppData\Local\Tesseract-OCR\tesseract.exe']
+    for p in common_paths:
+        if os.path.exists(p):
+            pytesseract.pytesseract.tesseract_cmd = p
+            break
 
 # --- SESSION STATE INITIALIZATION ---
 if 'logged_in' not in st.session_state:
@@ -231,8 +277,8 @@ elif st.session_state.role == "Giáo viên":
         with st.sidebar:
             st.markdown(f"### 👨‍🏫 {st.session_state.user_name}")
             st.markdown("---")
-            options = ["Nộp kế hoạch bài dạy", "Tập huấn"]
-            icons = ["file-earmark-arrow-up", "mortarboard"]
+            options = ["Nộp kế hoạch bài dạy", "Tập huấn", "Chuyển PDF sang Văn bản"]
+            icons = ["file-earmark-arrow-up", "mortarboard", "file-earmark-text"]
             
             # Chỉ admin mới thấy mục "Câu hỏi học sinh"
             if st.session_state.get('user_id') == 'admin':
@@ -298,6 +344,69 @@ elif st.session_state.role == "Giáo viên":
             except Exception as e:
                 st.error(f"Lỗi đọc dữ liệu: {e}")
                 
+        elif selected == "Chuyển PDF sang Văn bản":
+            st.title("📄 Chuyển PDF / Ảnh sang Văn bản")
+            st.info("Công cụ hỗ trợ giáo viên trích xuất văn bản từ tài liệu PDF hoặc ảnh chụp bài tập.")
+            
+            # Cấu hình OCR trong tab
+            ocr_col1, ocr_col2 = st.columns([2, 1])
+            with ocr_col2:
+                st.subheader("⚙️ Cấu hình")
+                ocr_method = st.radio("Phương pháp:", ("Tiêu chuẩn (Tesseract)", "AI Nâng cao (GPT-4o)"), index=1)
+                st.caption("AI Nâng cao cho kết quả chính xác hơn với chữ viết tay.")
+            
+            with ocr_col1:
+                uploaded_ocr = st.file_uploader("Tải lên file (PDF, PNG, JPG):", type=['pdf', 'png', 'jpg', 'jpeg'], accept_multiple_files=True)
+
+            if uploaded_ocr:
+                for f in uploaded_ocr:
+                    with st.expander(f"Kết quả cho: {f.name}", expanded=True):
+                        with st.spinner("Đang xử lý..."):
+                            f_bytes = f.getvalue()
+                            ext = f.name.split('.')[-1].lower()
+                            txt = ""
+                            err = None
+                            
+                            if ocr_method == "AI Nâng cao (GPT-4o)":
+                                if ext == 'pdf':
+                                    try:
+                                        imgs = convert_from_bytes(f_bytes)
+                                        all_t = []
+                                        for img in imgs:
+                                            buf = io.BytesIO()
+                                            img.save(buf, format='JPEG')
+                                            t, e = ocr_with_ai_logic(buf.getvalue(), st.secrets.get("OPENAI_API_KEY"), 'jpg')
+                                            if e: err = e; break
+                                            all_t.append(t)
+                                        txt = "\n\n--- Trang mới ---\n\n".join(all_t)
+                                    except Exception as ex: err = str(ex)
+                                else:
+                                    txt, err = ocr_with_ai_logic(f_bytes, st.secrets.get("OPENAI_API_KEY"), ext)
+                            else:
+                                if ext == 'pdf':
+                                    try:
+                                        imgs = convert_from_bytes(f_bytes)
+                                        txt = "\n\n--- Trang mới ---\n\n".join([pytesseract.image_to_string(img, lang="vie+eng") for img in imgs])
+                                    except Exception as ex: err = str(ex)
+                                else:
+                                    try:
+                                        img = Image.open(io.BytesIO(f_bytes))
+                                        txt = pytesseract.image_to_string(img, lang="vie+eng")
+                                    except Exception as ex: err = str(ex)
+                            
+                            if err:
+                                st.error(f"Lỗi: {err}")
+                            else:
+                                st.text_area("Văn bản trích xuất:", txt, height=300, key=f"out_{f.name}")
+                                
+                                # Các nút tải về
+                                dl_col1, dl_col2 = st.columns(2)
+                                with dl_col1:
+                                    st.download_button("📥 Tải về file .txt", txt.encode('utf-8'), file_name=f"ket_qua_{f.name}.txt", use_container_width=True)
+                                with dl_col2:
+                                    word_data = create_word_file(txt)
+                                    st.download_button("📥 Tải về file Word", word_data, file_name=f"ket_qua_{f.name}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
+
         elif selected == "Đăng xuất":
             logout()
 

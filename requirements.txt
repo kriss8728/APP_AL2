@@ -1,5 +1,9 @@
 streamlit
 pandas
-openai
+openai>=1.0.0
 streamlit-option-menu
 openpyxl
+pytesseract
+pdf2image
+Pillow
+python-docx
